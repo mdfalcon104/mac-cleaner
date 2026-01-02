@@ -12,8 +12,54 @@ from datetime import datetime
 from collections import defaultdict
 
 
-# System directories to skip when detecting leftover files
-SYSTEM_SKIP_PATTERNS = ['apple', 'com.apple', 'google', 'microsoft', 'adobe']
+# System directories and files to skip when detecting leftover files
+# These are critical system files that should NEVER be deleted
+SYSTEM_SKIP_PATTERNS = [
+    'apple',
+    'com.apple',
+    'google',
+    'microsoft',
+    'adobe',
+    'webkit',
+    'safari',
+    'finder',
+    'system',
+    'kernel',
+    'darwin',
+    'corefoundation',
+    'iokit',
+    'security',
+    'metal',
+    'cloudkit',
+    'homekit',
+    'healthkit',
+]
+
+# Additional protection: exact prefixes that must match
+SYSTEM_PREFIXES = [
+    'com.apple.',
+    'apple.',
+    'com.google.',
+    'com.microsoft.',
+    'com.adobe.',
+]
+
+
+def is_system_file(filename):
+    """Check if a file or directory is a system file that should not be deleted"""
+    filename_lower = filename.lower()
+    
+    # Check exact prefixes first (most restrictive)
+    for prefix in SYSTEM_PREFIXES:
+        if filename_lower.startswith(prefix):
+            return True
+    
+    # Check if any system pattern is in the filename
+    for pattern in SYSTEM_SKIP_PATTERNS:
+        if pattern in filename_lower:
+            return True
+    
+    return False
 
 
 def get_size_mb(path):
@@ -87,6 +133,7 @@ def clean_user_caches(stats_dict=None):
     cache_path = os.path.expanduser("~/Library/Caches")
     total_freed = 0
     items_count = 0
+    skipped_system_files = 0
     
     if not os.path.exists(cache_path):
         print("✗ User Caches: Directory not found")
@@ -95,6 +142,11 @@ def clean_user_caches(stats_dict=None):
     print("\nCleaning User Caches...")
     try:
         for item in os.listdir(cache_path):
+            # SAFETY CHECK: Skip system files
+            if is_system_file(item):
+                skipped_system_files += 1
+                continue
+            
             item_path = os.path.join(cache_path, item)
             if os.path.isdir(item_path):
                 size = get_size_mb(item_path)
@@ -109,6 +161,8 @@ def clean_user_caches(stats_dict=None):
     except Exception as e:
         print(f"✗ Error cleaning user caches: {str(e)}")
     
+    if skipped_system_files > 0:
+        print(f"  ℹ Skipped {skipped_system_files} system files for safety")
     print(f"✓ User Caches: Total freed {total_freed:.2f} MB")
     
     # Track statistics
@@ -255,19 +309,19 @@ def find_leftover_app_files():
                 
                 # If not related to any installed app, consider it leftover
                 if not is_app_related and os.path.isdir(item_path):
-                    # Skip common system/generic directories
-                    should_skip = any(skip in item_lower for skip in SYSTEM_SKIP_PATTERNS)
+                    # SAFETY CHECK: Skip system files using the comprehensive check
+                    if is_system_file(item):
+                        continue
                     
-                    if not should_skip:
-                        size = get_size_mb(item_path)
-                        if size > 0.5:  # Only show items larger than 0.5 MB
-                            leftover_files.append({
-                                'path': item_path,
-                                'name': item,
-                                'location': dir_name,
-                                'size': size
-                            })
-                            total_size += size
+                    size = get_size_mb(item_path)
+                    if size > 0.5:  # Only show items larger than 0.5 MB
+                        leftover_files.append({
+                            'path': item_path,
+                            'name': item,
+                            'location': dir_name,
+                            'size': size
+                        })
+                        total_size += size
         except Exception as e:
             print(f"  ⚠ Could not scan {dir_name}: {str(e)}")
     
@@ -319,97 +373,130 @@ def clean_leftover_app_files():
 
 def list_and_uninstall_apps():
     """Interactive mode to list and uninstall applications"""
-    print("\n🗂️  Installed Applications Manager")
-    print("=" * 60)
     
-    installed_apps = get_installed_apps()
-    
-    if not installed_apps:
-        print("No applications found")
-        return
-    
-    # Sort by name
-    installed_apps.sort(key=lambda x: os.path.basename(x).lower())
-    
-    print(f"\nFound {len(installed_apps)} installed applications:\n")
-    
-    for i, app_path in enumerate(installed_apps, 1):
-        app_name = os.path.basename(app_path)
-        size = get_size_mb(app_path)
-        location = "System" if app_path.startswith("/Applications") else "User"
-        print(f"  {i}. {app_name:<40} ({size:>8.2f} MB) [{location}]")
-    
-    print("\n" + "=" * 60)
-    print("Enter app number to uninstall (or 'q' to skip): ", end='')
-    
-    try:
-        response = input().strip()
+    while True:  # Loop until user quits
+        print("\n🗂️  Installed Applications Manager")
+        print("=" * 60)
         
-        if response.lower() == 'q':
-            print("✓ Skipped app uninstallation")
+        installed_apps = get_installed_apps()
+        
+        if not installed_apps:
+            print("No applications found")
             return
         
+        # Sort by name
+        installed_apps.sort(key=lambda x: os.path.basename(x).lower())
+        
+        print(f"\nFound {len(installed_apps)} installed applications:\n")
+        print("ℹ️  Note: System apps in /Applications require admin password to uninstall\n")
+        
+        for i, app_path in enumerate(installed_apps, 1):
+            app_name = os.path.basename(app_path)
+            size = get_size_mb(app_path)
+            location = "System" if app_path.startswith("/Applications") else "User"
+            print(f"  {i}. {app_name:<40} ({size:>8.2f} MB) [{location}]")
+        
+        print("\n" + "=" * 60)
+        print("Enter app number to uninstall (or 'q' to quit): ", end='')
+        
         try:
-            app_index = int(response) - 1
-            if 0 <= app_index < len(installed_apps):
-                app_path = installed_apps[app_index]
-                app_name = os.path.basename(app_path)
-                
-                print(f"\n⚠️  Are you sure you want to uninstall '{app_name}'? [y/N]: ", end='')
-                confirm = input().strip().lower()
-                
-                if confirm == 'y' or confirm == 'yes':
-                    try:
-                        size = get_size_mb(app_path)
-                        shutil.rmtree(app_path)
-                        print(f"✓ Uninstalled {app_name} (freed {size:.2f} MB)")
-                        
-                        # Also try to remove associated files
-                        print("\n🔍 Checking for associated files...")
-                        app_base_name = app_name.replace('.app', '').lower()
-                        
-                        check_dirs = [
-                            os.path.expanduser("~/Library/Application Support"),
-                            os.path.expanduser("~/Library/Preferences"),
-                            os.path.expanduser("~/Library/Caches"),
-                        ]
-                        
-                        total_cleaned = 0
-                        for check_dir in check_dirs:
-                            if os.path.exists(check_dir):
-                                for item in os.listdir(check_dir):
-                                    # More specific matching to avoid false positives
-                                    item_lower = item.lower()
-                                    if (item_lower == app_base_name or 
-                                        item_lower.startswith(app_base_name + '.') or
-                                        item_lower.startswith(app_base_name + ' ') or
-                                        item_lower.endswith('.' + app_base_name) or
-                                        ('.' + app_base_name + '.') in item_lower):
-                                        item_path = os.path.join(check_dir, item)
-                                        try:
-                                            if os.path.isdir(item_path):
-                                                size = get_size_mb(item_path)
-                                                shutil.rmtree(item_path)
-                                                print(f"  ✓ Removed {item} ({size:.2f} MB)")
-                                                total_cleaned += size
-                                        except Exception:
-                                            pass
-                        
-                        if total_cleaned > 0:
-                            print(f"✓ Cleaned {total_cleaned:.2f} MB of associated files")
-                        else:
-                            print("✓ No additional associated files found")
+            response = input().strip()
+            
+            if response.lower() == 'q':
+                print("✓ Exiting application manager")
+                return
+            
+            try:
+                app_index = int(response) - 1
+                if 0 <= app_index < len(installed_apps):
+                    app_path = installed_apps[app_index]
+                    app_name = os.path.basename(app_path)
+                    
+                    print(f"\n⚠️  Are you sure you want to uninstall '{app_name}'? [y/N]: ", end='')
+                    confirm = input().strip().lower()
+                    
+                    if confirm == 'y' or confirm == 'yes':
+                        try:
+                            size = get_size_mb(app_path)
                             
-                    except Exception as e:
-                        print(f"✗ Failed to uninstall: {str(e)}")
+                            # Check if app is in system location and needs sudo
+                            is_system_app = app_path.startswith("/Applications/")
+                            
+                            if is_system_app:
+                                print(f"\n⚠️  '{app_name}' is in /Applications and requires administrator privileges.")
+                                print(f"Running: sudo rm -rf '{app_path}'")
+                                print("You may be prompted for your password.\n")
+                                
+                                try:
+                                    result = subprocess.run(
+                                        ['sudo', 'rm', '-rf', app_path],
+                                        check=True,
+                                        capture_output=True,
+                                        text=True
+                                    )
+                                    print(f"✓ Uninstalled {app_name} (freed {size:.2f} MB)")
+                                except subprocess.CalledProcessError as e:
+                                    print(f"✗ Failed to uninstall: sudo command failed")
+                                    print(f"  Error: {e.stderr if e.stderr else 'Permission denied or cancelled'}")
+                                    continue  # Continue loop instead of returning
+                                except Exception as e:
+                                    print(f"✗ Failed to uninstall: {str(e)}")
+                                    continue  # Continue loop instead of returning
+                            else:
+                                # User app - can delete without sudo
+                                shutil.rmtree(app_path)
+                                print(f"✓ Uninstalled {app_name} (freed {size:.2f} MB)")
+                            
+                            # Also try to remove associated files
+                            print("\n🔍 Checking for associated files...")
+                            app_base_name = app_name.replace('.app', '').lower()
+                            
+                            check_dirs = [
+                                os.path.expanduser("~/Library/Application Support"),
+                                os.path.expanduser("~/Library/Preferences"),
+                                os.path.expanduser("~/Library/Caches"),
+                            ]
+                            
+                            total_cleaned = 0
+                            for check_dir in check_dirs:
+                                if os.path.exists(check_dir):
+                                    for item in os.listdir(check_dir):
+                                        # More specific matching to avoid false positives
+                                        item_lower = item.lower()
+                                        if (item_lower == app_base_name or 
+                                            item_lower.startswith(app_base_name + '.') or
+                                            item_lower.startswith(app_base_name + ' ') or
+                                            item_lower.endswith('.' + app_base_name) or
+                                            ('.' + app_base_name + '.') in item_lower):
+                                            item_path = os.path.join(check_dir, item)
+                                            try:
+                                                if os.path.isdir(item_path):
+                                                    size = get_size_mb(item_path)
+                                                    shutil.rmtree(item_path)
+                                                    print(f"  ✓ Removed {item} ({size:.2f} MB)")
+                                                    total_cleaned += size
+                                            except Exception:
+                                                pass
+                            
+                            if total_cleaned > 0:
+                                print(f"✓ Cleaned {total_cleaned:.2f} MB of associated files")
+                            else:
+                                print("✓ No additional associated files found")
+                                
+                        except Exception as e:
+                            print(f"✗ Failed to uninstall: {str(e)}")
+                    else:
+                        print("✓ Cancelled uninstallation")
                 else:
-                    print("✓ Cancelled uninstallation")
-            else:
-                print("✗ Invalid app number")
-        except ValueError:
-            print("✗ Invalid input")
-    except Exception:
-        print("\n✓ Skipped app uninstallation")
+                    print("✗ Invalid app number")
+            except ValueError:
+                print("✗ Invalid input")
+        except KeyboardInterrupt:
+            print("\n✓ Exiting application manager")
+            return
+        except Exception:
+            print("\n✗ Error occurred, continuing...")
+            continue
 
 
 def print_detailed_statistics(stats):

@@ -96,14 +96,30 @@ Interactive app management feature:
 
 ## Safety
 
-- ✅ Only cleans user-accessible directories (no system files)
-- ✅ Only removes temporary and cache files that can be regenerated
-- ✅ For `/tmp/`, only removes files older than 7 days
-- ✅ Skips files/directories it doesn't have permission to delete
-- ✅ Reports errors without stopping the entire process
-- ✅ Interactive confirmation for leftover file removal
-- ✅ Interactive confirmation for app uninstallation
-- ✅ Shows what will be removed before taking action
+Mac Cleaner includes comprehensive protections to ensure system files are never deleted:
+
+### 🛡️ System File Protection
+- **Automatic Detection**: Protects all Apple system files (com.apple.*, Apple.*)
+- **Major Vendors**: Protects Google, Microsoft, and Adobe system components
+- **Core macOS**: Protects WebKit, Safari, Finder, Metal, CloudKit, and other system frameworks
+- **Protected Patterns**: 18 system patterns and 5 critical prefixes are automatically skipped
+- **Examples of Protected Files**:
+  - `com.apple.SwiftUI.*` - Apple SwiftUI components
+  - `com.apple.Safari` - Safari browser data
+  - `com.apple.security.*` - macOS security components
+  - `com.apple.CloudKit` - iCloud integration
+  - All other Apple system services
+
+### ✅ Additional Safety Features
+- Only cleans user-accessible directories (no system files)
+- Only removes temporary and cache files that can be regenerated
+- For `/tmp/`, only removes files older than 7 days
+- Skips files/directories it doesn't have permission to delete
+- Reports errors without stopping the entire process
+- Interactive confirmation for leftover file removal
+- Interactive confirmation for app uninstallation
+- Shows what will be removed before taking action
+- Displays count of skipped system files for transparency
 
 ## Requirements
 
