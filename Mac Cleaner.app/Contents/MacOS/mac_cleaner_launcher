@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Get the directory where this script is located
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Go up to the repository root (3 levels up from MacOS directory)
+REPO_ROOT="$DIR/../../.."
+
+# Open a terminal window and run the Python script
+osascript <<EOF
+tell application "Terminal"
+    activate
+    do script "cd \"$REPO_ROOT\" && python3 clean_mac.py; exit"
+end tell
+EOF
