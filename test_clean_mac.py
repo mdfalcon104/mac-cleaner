@@ -39,6 +39,18 @@ class TestMacCleaner(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             freed = clean_mac.clean_directory(tmpdir, "Empty Test Dir")
             self.assertEqual(freed, 0)
+    
+    def test_get_installed_apps(self):
+        """Test get_installed_apps function"""
+        apps = clean_mac.get_installed_apps()
+        self.assertIsInstance(apps, list)
+    
+    def test_find_leftover_app_files(self):
+        """Test find_leftover_app_files function"""
+        leftover_files, total_size = clean_mac.find_leftover_app_files()
+        self.assertIsInstance(leftover_files, list)
+        self.assertIsInstance(total_size, (int, float))
+        self.assertGreaterEqual(total_size, 0)
 
 
 if __name__ == "__main__":

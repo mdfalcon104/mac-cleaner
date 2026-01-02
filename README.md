@@ -1,6 +1,6 @@
 # Mac Cleaner 🧹
 
-A simple macOS application to clean temporary and unused files from your Mac.
+A comprehensive macOS application to clean temporary and unused files, remove leftover files from uninstalled apps, and manage installed applications.
 
 ## Features
 
@@ -8,7 +8,9 @@ A simple macOS application to clean temporary and unused files from your Mac.
 - 🗄️ **Clean User Caches** - Remove cached files from `~/Library/Caches/`
 - 📝 **Clean User Logs** - Remove old log files from `~/Library/Logs/`
 - ⏰ **Clean Old Temp Files** - Remove temporary files older than 7 days from `/tmp/`
-- 📊 **Space Report** - See how much space you've freed
+- 🧹 **Clean Leftover App Files** - Automatically detect and remove files from uninstalled applications
+- 📦 **App Manager** - List and uninstall applications with their associated files
+- 📊 **Detailed Statistics** - See comprehensive breakdown of space freed by category
 
 ## Installation
 
@@ -65,6 +67,32 @@ python3 clean_mac.py
 | `~/Library/Caches/` | Application caches | ✅ Safe - apps will regenerate |
 | `~/Library/Logs/` | User log files | ✅ Safe - old logs |
 | `/tmp/` | Temporary files (>7 days old) | ✅ Safe - only old files |
+| `~/Library/Application Support/` | Leftover files from uninstalled apps | ✅ Safe - interactive confirmation |
+| `~/Library/Preferences/` | Leftover preferences from uninstalled apps | ✅ Safe - interactive confirmation |
+
+## New Features
+
+### 📊 Detailed Statistics
+After cleaning, you'll see a comprehensive breakdown showing:
+- Space freed by each category
+- Number of items removed per category
+- Total space recovered
+
+### 🧹 Leftover App Files Detection
+The cleaner now automatically scans for leftover files from applications you've uninstalled:
+- Checks `~/Library/Application Support/`
+- Checks `~/Library/Preferences/`
+- Checks `~/Library/Caches/`
+- Checks `~/Library/Saved Application State/`
+- Shows you what was found and asks for confirmation before removal
+
+### 📦 Application Manager
+Interactive app management feature:
+- Lists all installed applications (both System and User)
+- Shows app size and location
+- Allows you to uninstall applications
+- Automatically cleans up associated files when uninstalling
+- Safe confirmation prompts before any action
 
 ## Safety
 
@@ -73,6 +101,9 @@ python3 clean_mac.py
 - ✅ For `/tmp/`, only removes files older than 7 days
 - ✅ Skips files/directories it doesn't have permission to delete
 - ✅ Reports errors without stopping the entire process
+- ✅ Interactive confirmation for leftover file removal
+- ✅ Interactive confirmation for app uninstallation
+- ✅ Shows what will be removed before taking action
 
 ## Requirements
 

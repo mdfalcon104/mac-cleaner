@@ -38,6 +38,23 @@ python3 clean_mac.py
 | `~/Library/Caches/` | App cache files | 100MB - 5GB+ |
 | `~/Library/Logs/` | Application logs | 10MB - 500MB |
 | `/tmp/` | Old temp files (>7 days) | 50MB - 2GB |
+| **Leftover App Files** | Files from uninstalled apps | 50MB - 2GB+ |
+
+## New Interactive Features
+
+### 🧹 Leftover App Files Cleanup
+The cleaner will automatically:
+1. Scan for files from apps you've uninstalled
+2. Show you what it found (name, location, size)
+3. Ask if you want to remove them
+4. Clean up the files if you confirm
+
+### 📦 Application Manager
+Optional app management:
+1. After cleaning, you can choose to manage apps
+2. View all installed applications with sizes
+3. Select an app to uninstall
+4. Automatically removes associated files
 
 ## Safety Features
 
@@ -75,9 +92,47 @@ Time: 2026-01-02 14:30:00
 📝 Cleaning User Logs...
 ✓ User Logs: Cleaned 35.50 MB (42 items)
 
+🧹 Checking for leftover files from uninstalled apps...
+
+🔍 Scanning for leftover files from uninstalled apps...
+
+📦 Found 5 leftover items (127.30 MB)
+
+Leftover files from potentially uninstalled apps:
+  1. OldAppName (Application Support) - 85.20 MB
+  2. AnotherApp (Preferences) - 12.50 MB
+  3. RemovedApp (Caches) - 24.60 MB
+  ... and 2 more
+
+Would you like to remove these leftover files? [y/N]: y
+  ✓ Removed OldAppName
+  ✓ Removed AnotherApp
+  ✓ Removed RemovedApp
+
+✓ Removed 5 leftover items, freed 127.30 MB
+
+============================================================
+📊 DETAILED CLEANING STATISTICS
+============================================================
+
+📁 By Category:
+  • Trash                          250.50 MB (   15 items)
+  • User Caches                    251.25 MB (    3 items)
+  • Temporary Files (/tmp)         150.00 MB (    8 items)
+  • User Logs                       35.50 MB (   42 items)
+  • Leftover App Files             127.30 MB (    5 items)
+
+------------------------------------------------------------
+  TOTAL                            814.55 MB (   73 items)
+
+  Space freed: 814.55 MB (0.80 GB)
+============================================================
+
+Would you like to manage installed applications? [y/N]: n
+
 ============================================================
 ✨ Cleanup Complete!
-Total space freed: 687.25 MB (0.67 GB)
+Total space freed: 814.55 MB (0.80 GB)
 ============================================================
 
 Press Enter to close...
