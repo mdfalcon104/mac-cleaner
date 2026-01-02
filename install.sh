@@ -28,9 +28,17 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     read -p "This requires macOS tools (sips and iconutil) [y/N]: " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Converting icon to .icns format..."
-        
-        mkdir -p AppIcon.iconset
+        # Check if required tools are available
+        if ! command -v sips &> /dev/null; then
+            echo "❌ Error: 'sips' command not found. This tool is required for icon conversion."
+            echo "   Skipping icon conversion..."
+        elif ! command -v iconutil &> /dev/null; then
+            echo "❌ Error: 'iconutil' command not found. This tool is required for icon conversion."
+            echo "   Skipping icon conversion..."
+        else
+            echo "Converting icon to .icns format..."
+            
+            mkdir -p AppIcon.iconset
         sips -z 16 16     "Mac Cleaner.app/Contents/Resources/AppIcon.png" --out AppIcon.iconset/icon_16x16.png > /dev/null 2>&1
         sips -z 32 32     "Mac Cleaner.app/Contents/Resources/AppIcon.png" --out AppIcon.iconset/icon_16x16@2x.png > /dev/null 2>&1
         sips -z 32 32     "Mac Cleaner.app/Contents/Resources/AppIcon.png" --out AppIcon.iconset/icon_32x32.png > /dev/null 2>&1
@@ -42,12 +50,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         sips -z 512 512   "Mac Cleaner.app/Contents/Resources/AppIcon.png" --out AppIcon.iconset/icon_512x512.png > /dev/null 2>&1
         sips -z 1024 1024 "Mac Cleaner.app/Contents/Resources/AppIcon.png" --out AppIcon.iconset/icon_512x512@2x.png > /dev/null 2>&1
         
-        if iconutil -c icns AppIcon.iconset -o "Mac Cleaner.app/Contents/Resources/AppIcon.icns" 2> /dev/null; then
-            echo "✓ Icon converted to .icns format"
-            rm -rf AppIcon.iconset
-        else
-            echo "⚠️  Could not convert icon (this is optional)"
-            rm -rf AppIcon.iconset
+            if iconutil -c icns AppIcon.iconset -o "Mac Cleaner.app/Contents/Resources/AppIcon.icns" 2> /dev/null; then
+                echo "✓ Icon converted to .icns format"
+                rm -rf AppIcon.iconset
+            else
+                echo "⚠️  Could not convert icon (this is optional)"
+                rm -rf AppIcon.iconset
+            fi
         fi
     fi
 fi

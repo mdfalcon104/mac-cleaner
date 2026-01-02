@@ -10,6 +10,6 @@ REPO_ROOT="$DIR/../../.."
 osascript <<EOF
 tell application "Terminal"
     activate
-    do script "cd '$REPO_ROOT' && python3 clean_mac.py; exit"
+    do script "cd \"$REPO_ROOT\" && python3 clean_mac.py; exit"
 end tell
 EOF

@@ -140,7 +140,7 @@ def clean_old_tmp_files():
                 
                 # Get modification time
                 mtime = os.path.getmtime(item_path)
-                age_days = (datetime.now().timestamp() - mtime) / (24 * 3600)
+                age_days = (datetime.now() - datetime.fromtimestamp(mtime)).days
                 
                 # Remove files older than 7 days
                 if age_days > 7:
