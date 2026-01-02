@@ -12,6 +12,10 @@ from datetime import datetime
 from collections import defaultdict
 
 
+# System directories to skip when detecting leftover files
+SYSTEM_SKIP_PATTERNS = ['apple', 'com.apple', 'google', 'microsoft', 'adobe']
+
+
 def get_size_mb(path):
     """Get size of a file or directory in MB"""
     try:
@@ -72,16 +76,17 @@ def clean_directory(directory, description, stats_dict=None):
         return 0
 
 
-def empty_trash():
+def empty_trash(stats_dict=None):
     """Empty the macOS Trash"""
     trash_path = os.path.expanduser("~/.Trash")
-    return clean_directory(trash_path, "Trash")
+    return clean_directory(trash_path, "Trash", stats_dict)
 
 
-def clean_user_caches():
+def clean_user_caches(stats_dict=None):
     """Clean user cache directories"""
     cache_path = os.path.expanduser("~/Library/Caches")
     total_freed = 0
+    items_count = 0
     
     if not os.path.exists(cache_path):
         print("✗ User Caches: Directory not found")
@@ -98,12 +103,19 @@ def clean_user_caches():
                         shutil.rmtree(item_path)
                         print(f"  ✓ Removed {item}: {size:.2f} MB")
                         total_freed += size
+                        items_count += 1
                     except Exception as e:
                         print(f"  ⚠ Could not remove {item}: {str(e)}")
     except Exception as e:
         print(f"✗ Error cleaning user caches: {str(e)}")
     
     print(f"✓ User Caches: Total freed {total_freed:.2f} MB")
+    
+    # Track statistics
+    if stats_dict is not None:
+        stats_dict['items_removed'] = items_count
+        stats_dict['space_freed'] = total_freed
+    
     return total_freed
 
 
@@ -227,17 +239,24 @@ def find_leftover_app_files():
                 item_lower = item.lower()
                 is_app_related = False
                 
-                # Check against installed apps
+                # Check against installed apps with more specific matching
+                # Use word boundaries and consider the full identifier pattern
                 for app_name in installed_app_names:
-                    if app_name in item_lower or item_lower in app_name:
+                    # Check if item starts with app name or contains it as a component
+                    # Example: "MyApp" matches "MyApp.plist" or "com.company.MyApp"
+                    # but not "MyAppExtra" 
+                    if (item_lower == app_name or 
+                        item_lower.startswith(app_name + '.') or
+                        item_lower.startswith(app_name + ' ') or
+                        item_lower.endswith('.' + app_name) or
+                        ('.' + app_name + '.') in item_lower):
                         is_app_related = True
                         break
                 
                 # If not related to any installed app, consider it leftover
                 if not is_app_related and os.path.isdir(item_path):
                     # Skip common system/generic directories
-                    skip_items = ['apple', 'com.apple', 'google', 'microsoft', 'adobe']
-                    should_skip = any(skip in item_lower for skip in skip_items)
+                    should_skip = any(skip in item_lower for skip in SYSTEM_SKIP_PATTERNS)
                     
                     if not should_skip:
                         size = get_size_mb(item_path)
@@ -359,7 +378,13 @@ def list_and_uninstall_apps():
                         for check_dir in check_dirs:
                             if os.path.exists(check_dir):
                                 for item in os.listdir(check_dir):
-                                    if app_base_name in item.lower():
+                                    # More specific matching to avoid false positives
+                                    item_lower = item.lower()
+                                    if (item_lower == app_base_name or 
+                                        item_lower.startswith(app_base_name + '.') or
+                                        item_lower.startswith(app_base_name + ' ') or
+                                        item_lower.endswith('.' + app_base_name) or
+                                        ('.' + app_base_name + '.') in item_lower):
                                         item_path = os.path.join(check_dir, item)
                                         try:
                                             if os.path.isdir(item_path):
@@ -422,40 +447,17 @@ def main():
     # Clean trash
     print("\n📁 Emptying Trash...")
     trash_stats = {'items_removed': 0, 'space_freed': 0}
-    freed = empty_trash()
+    freed = empty_trash(trash_stats)
     stats['Trash']['space'] = freed
-    stats['Trash']['items'] = trash_stats.get('items_removed', 0)
+    stats['Trash']['items'] = trash_stats['items_removed']
     total_freed += freed
     
     # Clean user caches
     print("\n🗄️  Cleaning User Caches...")
-    cache_freed = 0
-    cache_items = 0
-    cache_path = os.path.expanduser("~/Library/Caches")
-    
-    if os.path.exists(cache_path):
-        try:
-            for item in os.listdir(cache_path):
-                item_path = os.path.join(cache_path, item)
-                if os.path.isdir(item_path):
-                    size = get_size_mb(item_path)
-                    if size > 0.1:
-                        try:
-                            shutil.rmtree(item_path)
-                            print(f"  ✓ Removed {item}: {size:.2f} MB")
-                            cache_freed += size
-                            cache_items += 1
-                        except Exception as e:
-                            print(f"  ⚠ Could not remove {item}: {str(e)}")
-        except Exception as e:
-            print(f"✗ Error cleaning user caches: {str(e)}")
-        
-        print(f"✓ User Caches: Total freed {cache_freed:.2f} MB")
-    else:
-        print("✗ User Caches: Directory not found")
-    
+    cache_stats = {'items_removed': 0, 'space_freed': 0}
+    cache_freed = clean_user_caches(cache_stats)
     stats['User Caches']['space'] = cache_freed
-    stats['User Caches']['items'] = cache_items
+    stats['User Caches']['items'] = cache_stats['items_removed']
     total_freed += cache_freed
     
     # Clean temporary files
